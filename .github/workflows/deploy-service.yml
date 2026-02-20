@@ -1,0 +1,61 @@
+name: Deploy Service
+
+on:
+  repository_dispatch:
+    types: [deploy-service]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Service name (e.g. travel-beat)"
+        required: true
+        type: string
+      image_tag:
+        description: "Image tag to deploy (e.g. latest or sha7)"
+        required: true
+        type: string
+        default: "latest"
+      has_migrations:
+        description: "Run Django migrations before restart?"
+        required: false
+        type: string
+        default: "false"
+
+concurrency:
+  group: deploy-production-${{ github.event.client_payload.service || inputs.service }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ github.event.client_payload.service || inputs.service }}
+    runs-on: [self-hosted, dev-server]
+    timeout-minutes: 15
+
+    steps:
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan 88.198.191.108 >> ~/.ssh/known_hosts
+
+      - name: Set deploy variables
+        id: vars
+        run: |
+          echo "service=${{ github.event.client_payload.service || inputs.service }}" >> $GITHUB_OUTPUT
+          echo "image_tag=${{ github.event.client_payload.image_tag || inputs.image_tag }}" >> $GITHUB_OUTPUT
+          echo "has_migrations=${{ github.event.client_payload.has_migrations || inputs.has_migrations }}" >> $GITHUB_OUTPUT
+
+      - name: Deploy on server
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          eval $(ssh-agent -s)
+          echo "$DEPLOY_SSH_KEY" | ssh-add -
+          ssh root@88.198.191.108 \
+            "bash /opt/infra-deploy/scripts/deploy.sh \
+              '${{ steps.vars.outputs.service }}' \
+              '${{ steps.vars.outputs.image_tag }}' \
+              '${{ steps.vars.outputs.has_migrations }}'"
+
+      - name: Report result
+        if: always()
+        run: |
+          echo "Deploy of ${{ steps.vars.outputs.service }}:${{ steps.vars.outputs.image_tag }} finished with status: ${{ job.status }}"
