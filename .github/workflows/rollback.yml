@@ -1,0 +1,46 @@
+name: Rollback Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Service name (e.g. travel-beat)"
+        required: true
+        type: string
+      target_tag:
+        description: "Tag to roll back to (leave empty for previous tag)"
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  group: deploy-production-${{ inputs.service }}
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: Rollback ${{ inputs.service }}
+    runs-on: [self-hosted, dev-server]
+    timeout-minutes: 10
+
+    steps:
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan 88.198.191.108 >> ~/.ssh/known_hosts
+
+      - name: Rollback on server
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          eval $(ssh-agent -s)
+          echo "$DEPLOY_SSH_KEY" | ssh-add -
+          ssh root@88.198.191.108 \
+            "bash /opt/infra-deploy/scripts/rollback.sh \
+              '${{ inputs.service }}' \
+              '${{ inputs.target_tag }}'"
+
+      - name: Report result
+        if: always()
+        run: |
+          echo "Rollback of ${{ inputs.service }} finished with status: ${{ job.status }}"
