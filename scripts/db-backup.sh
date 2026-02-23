@@ -16,22 +16,34 @@ LOG_FILE="${STATE_DIR}/deploy.log"
 RETENTION_DAYS=7
 
 # --- Service registry (mirrors ADR-021 §2.3) ---
+# DB_CONTAINER: the docker container running postgres for this service
 declare -A DB_CONTAINER=(
   [bfagent]="bfagent_db"
   [risk-hub]="risk_hub_db"
   [travel-beat]="travel_beat_db"
-  [weltenhub]="weltenhub_db"
+  [weltenhub]="bfagent_db"
   [pptx-hub]="pptx_hub_db"
-  [dev-hub]="dev_hub_db"
+  [dev-hub]="bfagent_db"
 )
 
+# DB_NAME: the actual database name inside postgres
 declare -A DB_NAME=(
-  [bfagent]="bfagent"
+  [bfagent]="bfagent_prod"
   [risk-hub]="risk_hub"
   [travel-beat]="travel_beat"
   [weltenhub]="weltenhub"
   [pptx-hub]="pptx_hub"
-  [dev-hub]="dev_hub"
+  [dev-hub]="devhub_db"
+)
+
+# DB_USER: the postgres user to connect as
+declare -A DB_USER=(
+  [bfagent]="bfagent"
+  [risk-hub]="postgres"
+  [travel-beat]="postgres"
+  [weltenhub]="bfagent"
+  [pptx-hub]="postgres"
+  [dev-hub]="bfagent"
 )
 
 # --- Validate service ---
@@ -42,6 +54,7 @@ fi
 
 DB_CTR="${DB_CONTAINER[$SERVICE]}"
 DB="${DB_NAME[$SERVICE]}"
+DB_USR="${DB_USER[$SERVICE]}"
 BACKUP_DIR="${BACKUP_BASE}/${SERVICE}"
 TIMESTAMP=$(date -u +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/${SERVICE}_${TIMESTAMP}.sql.gz"
@@ -49,10 +62,10 @@ BACKUP_FILE="${BACKUP_DIR}/${SERVICE}_${TIMESTAMP}.sql.gz"
 mkdir -p "$BACKUP_DIR" "$STATE_DIR"
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] START backup $SERVICE" >> "$LOG_FILE"
-echo "Backing up $SERVICE ($DB) to $BACKUP_FILE ..."
+echo "Backing up $SERVICE ($DB) from $DB_CTR as $DB_USR to $BACKUP_FILE ..."
 
 # --- Create backup ---
-docker exec "$DB_CTR" pg_dump -U postgres "$DB" | gzip > "$BACKUP_FILE"
+docker exec "$DB_CTR" pg_dump -U "$DB_USR" "$DB" | gzip > "$BACKUP_FILE"
 
 # --- Verify backup is non-empty ---
 if [[ ! -s "$BACKUP_FILE" ]]; then
