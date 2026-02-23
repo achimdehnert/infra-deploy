@@ -3,27 +3,36 @@
 Centralized deployment API for all `achimdehnert` platform services.
 
 > Implements [ADR-021 §2.14](https://github.com/achimdehnert/platform/blob/main/docs/adr/ADR-021-unified-deployment-pattern.md) — `infra-deploy` as Deployment API.
+> Architecture decision: [ADR-067](https://github.com/achimdehnert/platform/blob/main/docs/adr/ADR-067-deployment-execution-strategy.md) — Read/Write-Split (MCP local vs. GitHub Actions server-side).
 
 ---
 
 ## Purpose
 
-This repository is the **single entry point** for:
+This repository is the **single entry point** for all write operations:
 
 - **Agent-triggered deploys** (via `repository_dispatch`)
 - **Manual deploys** (via `workflow_dispatch` in GitHub UI)
 - **Explicit rollbacks** (via `rollback.yml`)
+- **Database migrations** (via `migrate.yml`)
+- **Database backups** (via `db-backup.yml`, daily + on-demand)
+- **Health checks** (via `health-check.yml`, every 15 min + on-demand)
 
 Standard push-triggered CI/CD continues to use `_deploy-hetzner.yml` in each service repo. This repo is **additive**, not a replacement.
+
+> **Read-only operations** (logs, status, DNS, SSL) remain in `deployment-mcp` local tools — they are fast and non-blocking.
 
 ---
 
 ## Workflows
 
-| Workflow | Trigger | Purpose |
-| --- | --- | --- |
-| `deploy-service.yml` | `repository_dispatch` / `workflow_dispatch` | Deploy a service to production |
-| `rollback.yml` | `workflow_dispatch` | Roll back a service to a previous tag |
+| Workflow | Trigger | Purpose | Timeout |
+| --- | --- | --- | --- |
+| `deploy-service.yml` | `repository_dispatch` / `workflow_dispatch` | Deploy + Health-Check + Auto-Rollback | 15 min |
+| `rollback.yml` | `workflow_dispatch` | Roll back to previous or specific tag | 10 min |
+| `migrate.yml` | `workflow_dispatch` | Run Django migrations (with optional backup) | 10 min |
+| `db-backup.yml` | `workflow_dispatch` / `schedule` (02:00 UTC) | PostgreSQL backup with 7-day retention | 15 min |
+| `health-check.yml` | `workflow_dispatch` / `schedule` (*/15 min) | Health check all or specific service | 5 min |
 
 ---
 
@@ -54,6 +63,13 @@ curl -X POST \
   }'
 ```
 
+### Migrations only
+
+1. Go to **Actions → migrate → Run workflow**
+2. Fill in:
+   - `service`: e.g. `travel-beat`
+   - `backup_first`: `true` (recommended)
+
 ### Rollback (GitHub UI)
 
 1. Go to **Actions → rollback → Run workflow**
@@ -72,6 +88,9 @@ Deploy state is tracked on `88.198.191.108` at:
 ├── <service>.tag        # Currently active image tag
 ├── <service>.tag.prev   # Previous tag (rollback target)
 └── deploy.log           # Append-only audit log
+
+/opt/deploy/backups/<service>/
+└── <service>_YYYYMMDD_HHMMSS.sql.gz   # DB backups (7-day retention)
 ```
 
 ---
@@ -88,21 +107,19 @@ Set these in **Settings → Secrets → Actions**:
 
 ## Self-Hosted Runner
 
-Workflows run on `[self-hosted, dev-server]`. The runner must be registered on the dev-server and healthy.
+Workflows run on `[self-hosted, dev-server]` on `88.198.191.108`.
 
-To verify: `systemctl status actions.runner.*`
+Runner status: **Settings → Actions → Runners**
 
 ---
 
 ## Service Registry
 
-All deploy parameters are defined in [ADR-021 §2.3](https://github.com/achimdehnert/platform/blob/main/docs/adr/ADR-021-unified-deployment-pattern.md).
-
 | Service | Deploy path | Host port | Health URL |
 | --- | --- | --- | --- |
 | bfagent | `/opt/bfagent-app` | 8088 | `https://bfagent.iil.pet/healthz/` |
 | risk-hub | `/opt/risk-hub` | 8090 | `https://demo.schutztat.de/healthz/` |
-| travel-beat | `/opt/travel-beat` | 8002 | `https://drifttales.com/healthz/` |
+| travel-beat | `/opt/travel-beat` | 8002 | `https://drifttales.app/healthz/` |
 | weltenhub | `/opt/weltenhub` | 8081 | `https://weltenforger.com/healthz/` |
 | pptx-hub | `/opt/pptx-hub` | 8020 | *(not deployed)* |
 | dev-hub | `/opt/dev-hub` | 8085 | `https://devhub.iil.pet/livez/` |
