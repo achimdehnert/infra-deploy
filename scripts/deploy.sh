@@ -34,13 +34,14 @@ declare -A WEB_SERVICE=(
   [dev-hub]="devhub-web"
 )
 
-declare -A HEALTH_PORT=(
-  [bfagent]="8088"
-  [risk-hub]="8090"
-  [travel-beat]="8002"
-  [weltenhub]="8081"
-  [pptx-hub]="8020"
-  [dev-hub]="8085"
+# Health URLs — use public HTTPS URLs where Caddy/Nginx sits in front
+declare -A HEALTH_URL=(
+  [bfagent]="https://bfagent.iil.pet/healthz/"
+  [risk-hub]="https://demo.schutztat.de/health/"
+  [travel-beat]="https://drifttales.com/health/"
+  [weltenhub]="https://weltenforger.com/health/"
+  [pptx-hub]="http://127.0.0.1:8020/healthz/"
+  [dev-hub]="https://devhub.iil.pet/livez/"
 )
 
 declare -A COMPOSE_FILE=(
@@ -60,7 +61,7 @@ fi
 
 DEPLOY_DIR="${DEPLOY_PATH[$SERVICE]}"
 WEB_SVC="${WEB_SERVICE[$SERVICE]}"
-PORT="${HEALTH_PORT[$SERVICE]}"
+HEALTH="${HEALTH_URL[$SERVICE]}"
 COMPOSE="${COMPOSE_FILE[$SERVICE]}"
 TAG_FILE="${STATE_DIR}/${SERVICE}.tag"
 PREV_TAG_FILE="${STATE_DIR}/${SERVICE}.tag.prev"
@@ -96,9 +97,9 @@ HEALTH_RETRIES=12
 HEALTH_INTERVAL=5
 HEALTH_OK=false
 
+echo "Health check: $HEALTH"
 for i in $(seq 1 $HEALTH_RETRIES); do
-  if curl -sf "http://127.0.0.1:${PORT}/healthz/" > /dev/null 2>&1 || \
-     curl -sf "http://127.0.0.1:${PORT}/livez/" > /dev/null 2>&1; then
+  if curl -sf "$HEALTH" > /dev/null 2>&1; then
     HEALTH_OK=true
     break
   fi
