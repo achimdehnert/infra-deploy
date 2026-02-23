@@ -16,7 +16,7 @@ jobs:
   backup:
     name: Backup ${{ inputs.service || 'all' }}
     runs-on: [self-hosted, dev-server]
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - name: Add server to known hosts
@@ -32,7 +32,7 @@ jobs:
           echo "$DEPLOY_SSH_KEY" | ssh-add -
           SERVICE="${{ inputs.service }}"
           if [ -z "$SERVICE" ]; then
-            for svc in bfagent risk-hub travel-beat weltenhub; do
+            for svc in bfagent risk-hub travel-beat weltenhub dev-hub pptx-hub coach-hub trading-hub wedding-hub; do
               echo "=== Backing up $svc ==="
               ssh root@88.198.191.108 \
                 "bash /opt/infra-deploy/scripts/db-backup.sh '$svc'" || true
