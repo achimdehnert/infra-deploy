@@ -31,7 +31,7 @@ Standard push-triggered CI/CD continues to use `_deploy-hetzner.yml` in each ser
 | `deploy-service.yml` | `repository_dispatch` / `workflow_dispatch` | Deploy + Health-Check + Auto-Rollback | 15 min |
 | `rollback.yml` | `workflow_dispatch` | Roll back to previous or specific tag | 10 min |
 | `migrate.yml` | `workflow_dispatch` | Run Django migrations (with optional backup) | 10 min |
-| `db-backup.yml` | `workflow_dispatch` / `schedule` (02:00 UTC) | PostgreSQL backup with 7-day retention | 15 min |
+| `db-backup.yml` | `workflow_dispatch` / `schedule` (02:00 UTC) | PostgreSQL backup with 7-day retention | 30 min |
 | `health-check.yml` | `workflow_dispatch` / `schedule` (*/15 min) | Health check all or specific service | 5 min |
 
 ---
@@ -109,17 +109,28 @@ Set these in **Settings → Secrets → Actions**:
 
 Workflows run on `[self-hosted, dev-server]` on `88.198.191.108`.
 
-Runner status: **Settings → Actions → Runners**
+- **Installation path**: `/opt/actions-runner`
+- **Systemd service**: `actions.runner.achimdehnert-infra-deploy.prod-server.service`
+- **Runner status**: Settings → Actions → Runners
 
 ---
 
 ## Service Registry
 
-| Service | Deploy path | Host port | Health URL |
-| --- | --- | --- | --- |
-| bfagent | `/opt/bfagent-app` | 8088 | `https://bfagent.iil.pet/healthz/` |
-| risk-hub | `/opt/risk-hub` | 8090 | `https://demo.schutztat.de/healthz/` |
-| travel-beat | `/opt/travel-beat` | 8002 | `https://drifttales.app/healthz/` |
-| weltenhub | `/opt/weltenhub` | 8081 | `https://weltenforger.com/healthz/` |
-| pptx-hub | `/opt/pptx-hub` | 8020 | *(not deployed)* |
-| dev-hub | `/opt/dev-hub` | 8085 | `https://devhub.iil.pet/livez/` |
+All services deployed on Hetzner VM `88.198.191.108` via Docker Compose + GHCR images.
+
+| Service | Brand | Deploy Path | Compose Service | Health URL | DB Container | DB Name |
+| --- | --- | --- | --- | --- | --- | --- |
+| `bfagent` | BF Agent | `/opt/bfagent-app` | `bfagent-web` | `https://bfagent.iil.pet/healthz/` | `bfagent_db` | `bfagent_prod` |
+| `risk-hub` | Schutztat | `/opt/risk-hub` | `risk-hub-web` | `https://demo.schutztat.de/health/` | `risk_hub_db` | `risk_hub` |
+| `travel-beat` | DriftTales | `/opt/travel-beat` | `travel-beat-web` | `https://drifttales.com/health/` | `travel_beat_db` | `travel_beat` |
+| `weltenhub` | Weltenforger | `/opt/weltenhub` | `weltenhub-web` | `https://weltenforger.com/health/` | `bfagent_db` | `weltenhub` |
+| `dev-hub` | DevHub | `/opt/dev-hub` | `devhub-web` | `https://devhub.iil.pet/livez/` | `bfagent_db` | `devhub_db` |
+| `pptx-hub` | Prezimo | `/opt/pptx-hub` | `pptx-hub-web` | `https://prezimo.com/livez/` | `pptx_hub_db` | `pptx_hub` |
+| `coach-hub` | KI ohne Risiko | `/opt/coach-hub` | `coach-hub-web` | `http://127.0.0.1:8007/livez/` | `coach_hub_db` | `coach_hub` |
+| `trading-hub` | — | `/opt/trading-hub` | `trading-hub-web` | `https://trading-hub.iil.pet/livez/` | `trading_hub_db` | `tradinghub_prod` |
+| `wedding-hub` | — | `/opt/wedding-hub` | `wedding-hub-web` | `https://wedding-hub.iil.pet/livez/` | `wedding_hub_db` | `wedding_hub` |
+| `cad-hub` | nl2cad | `/opt/cad-hub` | `web` | `https://nl2cad.de/livez/` | `cad-hub-db-1` | `cad_hub` |
+
+> **Note**: `weltenhub` and `dev-hub` share the `bfagent_db` PostgreSQL container (user: `bfagent`).
+> `cad-hub` is currently stopped (not actively deployed).
