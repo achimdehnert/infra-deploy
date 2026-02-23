@@ -4,11 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       service:
-        description: "Service name (e.g. travel-beat)"
-        required: true
+        description: "Service name (leave empty for all services)"
+        required: false
         type: string
+        default: ""
   schedule:
-    # Daily at 02:00 UTC for all services
+    # Daily at 02:00 UTC
     - cron: "0 2 * * *"
 
 jobs:
@@ -17,27 +18,31 @@ jobs:
     runs-on: [self-hosted, dev-server]
     timeout-minutes: 15
 
-    strategy:
-      matrix:
-        service: ${{ inputs.service && fromJSON(format('["{\'0\'"]', inputs.service)) || fromJSON('["bfagent","risk-hub","travel-beat","weltenhub"]') }}
-      fail-fast: false
-
     steps:
       - name: Add server to known hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan 88.198.191.108 >> ~/.ssh/known_hosts
 
-      - name: Backup database
+      - name: Backup database(s)
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           eval $(ssh-agent -s)
           echo "$DEPLOY_SSH_KEY" | ssh-add -
-          ssh root@88.198.191.108 \
-            "bash /opt/infra-deploy/scripts/db-backup.sh '${{ matrix.service }}'"
+          SERVICE="${{ inputs.service }}"
+          if [ -z "$SERVICE" ]; then
+            for svc in bfagent risk-hub travel-beat weltenhub; do
+              echo "=== Backing up $svc ==="
+              ssh root@88.198.191.108 \
+                "bash /opt/infra-deploy/scripts/db-backup.sh '$svc'" || true
+            done
+          else
+            ssh root@88.198.191.108 \
+              "bash /opt/infra-deploy/scripts/db-backup.sh '$SERVICE'"
+          fi
 
       - name: Report result
         if: always()
         run: |
-          echo "Backup of ${{ matrix.service }} finished with status: ${{ job.status }}"
+          echo "Backup finished with status: ${{ job.status }}"
