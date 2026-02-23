@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# db-backup.sh — PostgreSQL backup for a single platform service
+# Usage: db-backup.sh <service>
+# Example: db-backup.sh travel-beat
+#
+# Backups stored at: /opt/deploy/backups/<service>/<service>_YYYYMMDD_HHMMSS.sql.gz
+# Retention: 7 days
+
+set -euo pipefail
+
+SERVICE="${1:?Usage: db-backup.sh <service>}"
+
+BACKUP_BASE="/opt/deploy/backups"
+STATE_DIR="/opt/deploy/production/.deployed"
+LOG_FILE="${STATE_DIR}/deploy.log"
+RETENTION_DAYS=7
+
+# --- Service registry (mirrors ADR-021 §2.3) ---
+declare -A DB_CONTAINER=(
+  [bfagent]="bfagent_db"
+  [risk-hub]="risk_hub_db"
+  [travel-beat]="travel_beat_db"
+  [weltenhub]="weltenhub_db"
+  [pptx-hub]="pptx_hub_db"
+  [dev-hub]="dev_hub_db"
+)
+
+declare -A DB_NAME=(
+  [bfagent]="bfagent"
+  [risk-hub]="risk_hub"
+  [travel-beat]="travel_beat"
+  [weltenhub]="weltenhub"
+  [pptx-hub]="pptx_hub"
+  [dev-hub]="dev_hub"
+)
+
+# --- Validate service ---
+if [[ -z "${DB_CONTAINER[$SERVICE]:-}" ]]; then
+  echo "ERROR: Unknown service '$SERVICE'. Valid: ${!DB_CONTAINER[*]}" >&2
+  exit 1
+fi
+
+DB_CTR="${DB_CONTAINER[$SERVICE]}"
+DB="${DB_NAME[$SERVICE]}"
+BACKUP_DIR="${BACKUP_BASE}/${SERVICE}"
+TIMESTAMP=$(date -u +%Y%m%d_%H%M%S)
+BACKUP_FILE="${BACKUP_DIR}/${SERVICE}_${TIMESTAMP}.sql.gz"
+
+mkdir -p "$BACKUP_DIR" "$STATE_DIR"
+
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] START backup $SERVICE" >> "$LOG_FILE"
+echo "Backing up $SERVICE ($DB) to $BACKUP_FILE ..."
+
+# --- Create backup ---
+docker exec "$DB_CTR" pg_dump -U postgres "$DB" | gzip > "$BACKUP_FILE"
+
+# --- Verify backup is non-empty ---
+if [[ ! -s "$BACKUP_FILE" ]]; then
+  echo "ERROR: Backup file is empty: $BACKUP_FILE" >&2
+  rm -f "$BACKUP_FILE"
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] FAILED backup $SERVICE" >> "$LOG_FILE"
+  exit 1
+fi
+
+BACKUP_SIZE=$(du -sh "$BACKUP_FILE" | cut -f1)
+echo "Backup created: $BACKUP_FILE ($BACKUP_SIZE)"
+
+# --- Cleanup old backups (retention) ---
+find "$BACKUP_DIR" -name "*.sql.gz" -mtime +${RETENTION_DAYS} -delete
+echo "Cleaned up backups older than ${RETENTION_DAYS} days."
+
+echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] SUCCESS backup $SERVICE size=${BACKUP_SIZE}" >> "$LOG_FILE"

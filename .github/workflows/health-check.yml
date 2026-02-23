@@ -1,0 +1,39 @@
+name: Health Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Service name (leave empty for all services)"
+        required: false
+        type: string
+        default: ""
+  schedule:
+    # Every 15 minutes
+    - cron: "*/15 * * * *"
+
+jobs:
+  health-check:
+    name: Health Check ${{ inputs.service || 'all' }}
+    runs-on: [self-hosted, dev-server]
+    timeout-minutes: 5
+
+    steps:
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan 88.198.191.108 >> ~/.ssh/known_hosts
+
+      - name: Run health checks
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          eval $(ssh-agent -s)
+          echo "$DEPLOY_SSH_KEY" | ssh-add -
+          ssh root@88.198.191.108 \
+            "bash /opt/infra-deploy/scripts/health-check.sh '${{ inputs.service }}'"
+
+      - name: Report result
+        if: always()
+        run: |
+          echo "Health check finished with status: ${{ job.status }}"

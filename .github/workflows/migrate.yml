@@ -1,0 +1,54 @@
+name: Run Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Service name (e.g. travel-beat)"
+        required: true
+        type: string
+      backup_first:
+        description: "Create DB backup before migrating?"
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-production-${{ inputs.service }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Migrate ${{ inputs.service }}
+    runs-on: [self-hosted, dev-server]
+    timeout-minutes: 10
+
+    steps:
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan 88.198.191.108 >> ~/.ssh/known_hosts
+
+      - name: Backup DB before migration
+        if: ${{ inputs.backup_first == true }}
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          eval $(ssh-agent -s)
+          echo "$DEPLOY_SSH_KEY" | ssh-add -
+          ssh root@88.198.191.108 \
+            "bash /opt/infra-deploy/scripts/db-backup.sh '${{ inputs.service }}'"
+
+      - name: Run migrations
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          eval $(ssh-agent -s)
+          echo "$DEPLOY_SSH_KEY" | ssh-add -
+          ssh root@88.198.191.108 \
+            "bash /opt/infra-deploy/scripts/migrate.sh '${{ inputs.service }}'"
+
+      - name: Report result
+        if: always()
+        run: |
+          echo "Migration of ${{ inputs.service }} finished with status: ${{ job.status }}"
