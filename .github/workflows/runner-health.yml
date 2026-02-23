@@ -1,0 +1,45 @@
+name: Runner Health Monitor
+
+on:
+  schedule:
+    # Every 30 minutes
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  runner-health:
+    name: Check Self-Hosted Runner
+    runs-on: [self-hosted, dev-server]
+    timeout-minutes: 5
+
+    steps:
+      - name: Runner is alive
+        run: |
+          echo "Runner: $(hostname)"
+          echo "User: $(whoami)"
+          echo "Uptime: $(uptime)"
+          echo "Docker: $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo 'unavailable')"
+          echo "Disk: $(df -h / | tail -1)"
+          echo "Memory: $(free -h | grep Mem)"
+
+      - name: Check Docker daemon
+        run: docker ps --format "table {{.Names}}\t{{.Status}}" | head -20
+
+      - name: Check critical containers
+        run: |
+          FAILED=""
+          for svc in bfagent-web risk-hub-web devhub-web; do
+            if docker ps --filter "name=${svc}" --filter "status=running" --format "{{.Names}}" | grep -q "${svc}"; then
+              echo "OK   ${svc}"
+            else
+              echo "FAIL ${svc}"
+              FAILED="${FAILED} ${svc}"
+            fi
+          done
+          if [ -n "${FAILED}" ]; then
+            echo "::warning::Unhealthy containers:${FAILED}"
+          fi
+
+      - name: Report
+        if: always()
+        run: echo "Runner health check finished: ${{ job.status }}"
