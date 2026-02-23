@@ -36,13 +36,13 @@ declare -A DB_NAME=(
   [dev-hub]="devhub_db"
 )
 
-# DB_USER: the postgres user to connect as
+# DB_USER: the postgres user to connect as (from POSTGRES_USER env in each container)
 declare -A DB_USER=(
   [bfagent]="bfagent"
-  [risk-hub]="postgres"
-  [travel-beat]="postgres"
+  [risk-hub]="risk_hub"
+  [travel-beat]="travelbeat"
   [weltenhub]="bfagent"
-  [pptx-hub]="postgres"
+  [pptx-hub]="pptx_hub"
   [dev-hub]="bfagent"
 )
 
