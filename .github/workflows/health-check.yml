@@ -8,6 +8,11 @@ on:
         required: false
         type: string
         default: ""
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/health-check.yml"
   schedule:
     # Every 15 minutes
     - cron: "*/15 * * * *"
