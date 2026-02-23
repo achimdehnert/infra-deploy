@@ -28,9 +28,9 @@ declare -A DEPLOY_PATH=(
 declare -A WEB_SERVICE=(
   [bfagent]="bfagent-web"
   [risk-hub]="risk-hub-web"
-  [travel-beat]="web"
+  [travel-beat]="travel-beat-web"
   [weltenhub]="weltenhub-web"
-  [pptx-hub]="web"
+  [pptx-hub]="pptx-hub-web"
   [dev-hub]="devhub-web"
 )
 
