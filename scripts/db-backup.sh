@@ -22,8 +22,12 @@ declare -A DB_CONTAINER=(
   [risk-hub]="risk_hub_db"
   [travel-beat]="travel_beat_db"
   [weltenhub]="bfagent_db"
-  [pptx-hub]="pptx_hub_db"
   [dev-hub]="bfagent_db"
+  [pptx-hub]="pptx_hub_db"
+  [coach-hub]="coach_hub_db"
+  [trading-hub]="trading_hub_db"
+  [wedding-hub]="wedding_hub_db"
+  [cad-hub]="cad_hub_db"
 )
 
 # DB_NAME: the actual database name inside postgres
@@ -32,18 +36,26 @@ declare -A DB_NAME=(
   [risk-hub]="risk_hub"
   [travel-beat]="travel_beat"
   [weltenhub]="weltenhub"
-  [pptx-hub]="pptx_hub"
   [dev-hub]="devhub_db"
+  [pptx-hub]="pptx_hub"
+  [coach-hub]="coach_hub"
+  [trading-hub]="tradinghub_prod"
+  [wedding-hub]="wedding_hub"
+  [cad-hub]="cad_hub"
 )
 
-# DB_USER: the postgres user to connect as (from POSTGRES_USER env in each container)
+# DB_USER: the postgres user (from POSTGRES_USER env in each container)
 declare -A DB_USER=(
   [bfagent]="bfagent"
   [risk-hub]="risk_hub"
   [travel-beat]="travelbeat"
   [weltenhub]="bfagent"
-  [pptx-hub]="pptx_hub"
   [dev-hub]="bfagent"
+  [pptx-hub]="pptx_hub"
+  [coach-hub]="coach_hub"
+  [trading-hub]="bfagent"
+  [wedding-hub]="wedding_hub"
+  [cad-hub]="postgres"
 )
 
 # --- Validate service ---
