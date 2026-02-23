@@ -21,27 +21,40 @@ declare -A DEPLOY_PATH=(
   [risk-hub]="/opt/risk-hub"
   [travel-beat]="/opt/travel-beat"
   [weltenhub]="/opt/weltenhub"
-  [pptx-hub]="/opt/pptx-hub"
   [dev-hub]="/opt/dev-hub"
+  [pptx-hub]="/opt/pptx-hub"
+  [coach-hub]="/opt/coach-hub"
+  [trading-hub]="/opt/trading-hub"
+  [wedding-hub]="/opt/wedding-hub"
+  [cad-hub]="/opt/cad-hub"
 )
 
+# WEB_SERVICE: the compose service name for the web container
 declare -A WEB_SERVICE=(
   [bfagent]="bfagent-web"
   [risk-hub]="risk-hub-web"
   [travel-beat]="travel-beat-web"
   [weltenhub]="weltenhub-web"
-  [pptx-hub]="pptx-hub-web"
   [dev-hub]="devhub-web"
+  [pptx-hub]="pptx-hub-web"
+  [coach-hub]="coach-hub-web"
+  [trading-hub]="trading-hub-web"
+  [wedding-hub]="wedding-hub-web"
+  [cad-hub]="web"
 )
 
-# Health URLs — use public HTTPS URLs where Caddy/Nginx sits in front
+# HEALTH_URL: public URL for post-deploy health check
 declare -A HEALTH_URL=(
   [bfagent]="https://bfagent.iil.pet/healthz/"
   [risk-hub]="https://demo.schutztat.de/health/"
   [travel-beat]="https://drifttales.com/health/"
   [weltenhub]="https://weltenforger.com/health/"
-  [pptx-hub]="http://127.0.0.1:8020/healthz/"
   [dev-hub]="https://devhub.iil.pet/livez/"
+  [pptx-hub]="https://prezimo.com/livez/"
+  [coach-hub]="http://127.0.0.1:8007/livez/"
+  [trading-hub]="https://trading-hub.iil.pet/livez/"
+  [wedding-hub]="https://wedding-hub.iil.pet/livez/"
+  [cad-hub]="https://nl2cad.de/livez/"
 )
 
 declare -A COMPOSE_FILE=(
@@ -49,8 +62,12 @@ declare -A COMPOSE_FILE=(
   [risk-hub]="docker-compose.prod.yml"
   [travel-beat]="docker-compose.prod.yml"
   [weltenhub]="docker-compose.prod.yml"
-  [pptx-hub]="docker-compose.prod.yml"
   [dev-hub]="docker-compose.prod.yml"
+  [pptx-hub]="docker-compose.prod.yml"
+  [coach-hub]="docker-compose.prod.yml"
+  [trading-hub]="docker-compose.prod.yml"
+  [wedding-hub]="docker-compose.prod.yml"
+  [cad-hub]="docker-compose.prod.yml"
 )
 
 # --- Validate service ---
