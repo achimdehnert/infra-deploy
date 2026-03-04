@@ -9,7 +9,7 @@ on:
 jobs:
   runner-health:
     name: Check Self-Hosted Runner
-    runs-on: [self-hosted, dev-server]
+    runs-on: [self-hosted, prod-server]
     timeout-minutes: 5
 
     steps:
