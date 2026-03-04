@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: infra-deploy
+  description: GitHub Actions infra-deploy runner — reusable deploy, health-check, backup, migrate workflows
+  tags: [github-actions, ci-cd, deployment, infrastructure]
+  annotations:
+    github.com/project-slug: achimdehnert/infra-deploy
+    deployment/server: "88.198.191.108"
+    deployment/runner-path: "/opt/actions-runner"
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: achimdehnert
+  system: platform-management
+  domain: platform
+  providesApis: []
+  dependsOn: []
