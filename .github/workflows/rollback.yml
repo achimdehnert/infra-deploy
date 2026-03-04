@@ -20,25 +20,15 @@ concurrency:
 jobs:
   rollback:
     name: Rollback ${{ inputs.service }}
-    runs-on: [self-hosted, dev-server]
+    runs-on: [self-hosted, prod-server]
     timeout-minutes: 10
 
     steps:
-      - name: Add server to known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan 88.198.191.108 >> ~/.ssh/known_hosts
-
       - name: Rollback on server
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
-          eval $(ssh-agent -s)
-          echo "$DEPLOY_SSH_KEY" | ssh-add -
-          ssh root@88.198.191.108 \
-            "bash /opt/infra-deploy/scripts/rollback.sh \
-              '${{ inputs.service }}' \
-              '${{ inputs.target_tag }}'"
+          bash /opt/infra-deploy/scripts/rollback.sh \
+            '${{ inputs.service }}' \
+            '${{ inputs.target_tag }}'
 
       - name: Report result
         if: always()
