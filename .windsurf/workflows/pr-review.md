@@ -1,9 +1,1 @@
----
-description: PR Review
----
-
-# PR Review
-
-- [ ] Keine Secrets, ADR-Compliance
-
-Format: `[BLOCK]` / `[SUGGEST]` / `[QUESTION]` / `[NITS]`
+/home/devuser/github/platform/.windsurf/workflows/pr-review.md
