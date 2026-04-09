@@ -27,6 +27,7 @@ declare -A DEPLOY_PATH=(
   [trading-hub]="/opt/trading-hub"
   [wedding-hub]="/opt/wedding-hub"
   [cad-hub]="/opt/cad-hub"
+  [writing-hub]="/opt/writing-hub"
 )
 
 # WEB_SERVICE: the compose service name for the web container
@@ -41,6 +42,7 @@ declare -A WEB_SERVICE=(
   [trading-hub]="trading-hub-web"
   [wedding-hub]="wedding-hub-web"
   [cad-hub]="web"
+  [writing-hub]="writing_hub_web"
 )
 
 # HEALTH_URL: public URL for post-deploy health check
@@ -55,6 +57,7 @@ declare -A HEALTH_URL=(
   [trading-hub]="https://trading-hub.iil.pet/livez/"
   [wedding-hub]="https://wedding-hub.iil.pet/livez/"
   [cad-hub]="https://nl2cad.de/livez/"
+  [writing-hub]="https://writing.iil.pet/health/"
 )
 
 declare -A COMPOSE_FILE=(
@@ -68,6 +71,7 @@ declare -A COMPOSE_FILE=(
   [trading-hub]="docker-compose.prod.yml"
   [wedding-hub]="docker-compose.prod.yml"
   [cad-hub]="docker-compose.prod.yml"
+  [writing-hub]="docker-compose.prod.yml"
 )
 
 # --- Validate service ---

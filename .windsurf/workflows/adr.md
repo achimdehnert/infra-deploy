@@ -1,1 +1,1 @@
-/home/devuser/github/platform/.windsurf/workflows/adr.md
+/home/dehnert/github/platform/.windsurf/workflows/adr.md
