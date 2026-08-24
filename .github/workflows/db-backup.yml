@@ -23,10 +23,15 @@ jobs:
         run: |
           SERVICE="${{ inputs.service }}"
           if [ -z "$SERVICE" ]; then
+            FAILED=""
             for svc in bfagent risk-hub travel-beat weltenhub dev-hub pptx-hub coach-hub trading-hub wedding-hub; do
               echo "=== Backing up $svc ==="
-              bash /opt/infra-deploy/scripts/db-backup.sh "$svc" || true
+              bash /opt/infra-deploy/scripts/db-backup.sh "$svc" || FAILED="$FAILED $svc"
             done
+            if [ -n "$FAILED" ]; then
+              echo "::error::Backup fehlgeschlagen fuer:$FAILED (gestoppte Container werden im Skript als SKIP behandelt, nicht als Fehler)"
+              exit 1
+            fi
           else
             bash /opt/infra-deploy/scripts/db-backup.sh "$SERVICE"
           fi
