@@ -10,7 +10,7 @@ set -euo pipefail
 
 SERVICE="${1:?Usage: db-backup.sh <service>}"
 
-BACKUP_BASE="/opt/deploy/backups"
+BACKUP_BASE="/mnt/HC_Volume_105908261/deploy-backups"
 STATE_DIR="/opt/deploy/production/.deployed"
 LOG_FILE="${STATE_DIR}/deploy.log"
 RETENTION_DAYS=7
