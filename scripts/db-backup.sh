@@ -22,7 +22,7 @@ declare -A DB_CONTAINER=(
   [risk-hub]="risk_hub_db"
   [travel-beat]="travel_beat_db"
   [weltenhub]="bfagent_db"
-  [dev-hub]="bfagent_db"
+  [dev-hub]="devhub_db"
   [pptx-hub]="pptx_hub_db"
   [coach-hub]="coach_hub_db"
   [trading-hub]="trading_hub_db"
@@ -50,7 +50,7 @@ declare -A DB_USER=(
   [risk-hub]="risk_hub"
   [travel-beat]="travelbeat"
   [weltenhub]="bfagent"
-  [dev-hub]="bfagent"
+  [dev-hub]="devhub"
   [pptx-hub]="pptx_hub"
   [coach-hub]="coach_hub"
   [trading-hub]="bfagent"
@@ -68,6 +68,15 @@ DB_CTR="${DB_CONTAINER[$SERVICE]}"
 DB="${DB_NAME[$SERVICE]}"
 DB_USR="${DB_USER[$SERVICE]}"
 BACKUP_DIR="${BACKUP_BASE}/${SERVICE}"
+
+# --- Container muss laufen: ein gestoppter/eingefrorener Dienst ist ein lauter SKIP,
+# kein leeres 20-Byte-gzip (Befund 2026-08-24: 7 von 9 "gruenen" Dumps waren leer,
+# weil pg_dump gegen gestoppte Container lief und der Workflow-Loop Fehler schluckte).
+if ! docker ps --format '{{.Names}}' | grep -qx "$DB_CTR"; then
+  echo "SKIP $SERVICE: DB-Container '$DB_CTR' laeuft nicht (gestoppt/eingefroren/archiviert)"
+  exit 0
+fi
+
 TIMESTAMP=$(date -u +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/${SERVICE}_${TIMESTAMP}.sql.gz"
 
@@ -78,6 +87,15 @@ echo "Backing up $SERVICE ($DB) from $DB_CTR as $DB_USR to $BACKUP_FILE ..."
 
 # --- Create backup ---
 docker exec "$DB_CTR" pg_dump -U "$DB_USR" "$DB" | gzip > "$BACKUP_FILE"
+
+# Zwischengroesse pruefen, nicht nur Exit-Code: ein leeres gzip ist 20 Bytes gross
+# und sieht im Verzeichnis wie ein Backup aus.
+BYTES=$(stat -c%s "$BACKUP_FILE")
+if [ "$BYTES" -lt 1024 ]; then
+  echo "ERROR: Dump fuer $SERVICE verdaechtig klein (${BYTES} Bytes) — als Fehlschlag gewertet" >&2
+  rm -f "$BACKUP_FILE"
+  exit 1
+fi
 
 # --- Verify backup is non-empty ---
 if [[ ! -s "$BACKUP_FILE" ]]; then
