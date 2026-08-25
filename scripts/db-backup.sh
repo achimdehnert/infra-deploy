@@ -14,6 +14,12 @@ BACKUP_BASE="/mnt/HC_Volume_105908261/deploy-backups"
 STATE_DIR="/opt/deploy/production/.deployed"
 LOG_FILE="${STATE_DIR}/deploy.log"
 RETENTION_DAYS=7
+# Platten-Floor (platform#2284 K3, Owner-Go 2026-08-25): unter dieser Grenze wird
+# NICHT geschrieben. Ein Dump, der die Platte fuellt, ist schlimmer als ein
+# fehlender Dump — er reisst die laufenden Dienste mit. Der Speicher-Vorlauf-
+# Melder (platform 0.7.18) warnt sieben Tage vorher; dies ist die letzte Sperre.
+# Env-Override nur fuer die Positivkontrolle (MIN_FREE_BYTES=<riesig> => Exit 2).
+MIN_FREE_BYTES="${MIN_FREE_BYTES:-$((15 * 1024 * 1024 * 1024))}"
 
 # --- Service registry (mirrors ADR-021 §2.3) ---
 # DB_CONTAINER: the docker container running postgres for this service
@@ -68,6 +74,12 @@ DB_CTR="${DB_CONTAINER[$SERVICE]}"
 DB="${DB_NAME[$SERVICE]}"
 DB_USR="${DB_USER[$SERVICE]}"
 BACKUP_DIR="${BACKUP_BASE}/${SERVICE}"
+mkdir -p "$BACKUP_BASE"
+FREE_BYTES=$(df -B1 --output=avail "$BACKUP_BASE" 2>/dev/null | tail -1 | tr -d ' ')
+if [[ -z "$FREE_BYTES" ]] || (( FREE_BYTES < MIN_FREE_BYTES )); then
+  echo "ABBRUCH: $(( ${FREE_BYTES:-0} / 1024 / 1024 / 1024 )) GB frei unter $BACKUP_BASE, Floor $(( MIN_FREE_BYTES / 1024 / 1024 / 1024 )) GB — kein Dump, Platte wuerde volllaufen." >&2
+  exit 2
+fi
 
 # --- Container muss laufen: ein gestoppter/eingefrorener Dienst ist ein lauter SKIP,
 # kein leeres 20-Byte-gzip (Befund 2026-08-24: 7 von 9 "gruenen" Dumps waren leer,
