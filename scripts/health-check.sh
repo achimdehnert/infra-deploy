@@ -15,15 +15,14 @@ LOG_FILE="${STATE_DIR}/deploy.log"
 # --- Service registry (mirrors ADR-021 §2.3) ---
 declare -A HEALTH_URL=(
   # bfagent: eingefroren/gestoppt seit 2026-07-29 (platform#1303) — kein Health-Ziel
+  # travel-beat: stillgelegt seit 2026-08-30 (platform#2480, ports.yaml betriebsstatus) — kein Health-Ziel
   [risk-hub]="https://demo.schutztat.de/healthz/"
-  [travel-beat]="https://drifttales.app/healthz/"
   [weltenhub]="https://weltenforger.com/healthz/"
   [dev-hub]="https://devhub.iil.pet/livez/"
 )
 
 declare -A LOCAL_PORT=(
   [risk-hub]="8090"
-  [travel-beat]="8002"
   [weltenhub]="8081"
   [dev-hub]="8085"
 )
